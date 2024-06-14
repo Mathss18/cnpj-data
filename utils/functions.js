@@ -1,4 +1,4 @@
-import fs, { readdirSync, writeFileSync } from "fs";
+import { createReadStream, readdirSync, writeFileSync } from "fs";
 import csv from "csv-parser";
 
 export const getAllFileNames = (folderName) => {
@@ -8,57 +8,50 @@ export const getAllFileNames = (folderName) => {
     .map((dirent) => dirent.name);
 };
 
-export const readCSVFile = (filePath, headers, onData, onEnd, onError, batchSize) => {
+export const readCsvFile = async (
+  filePath,
+  headers,
+  batchSize,
+  batchFunction,
+  onEnd
+) => {
   return new Promise((resolve, reject) => {
-    let processingQueue = [];
-    let isProcessing = false;
+    let queue = [];
+    const stream = createReadStream(filePath).pipe(
+      csv({ separator: ";", headers: false })
+    );
 
-    const processQueue = async (readStream) => {
-      if (processingQueue.length === 0) {
-        readStream.resume();
-        return;
-      }
+    stream.on("data", async (row) => {
+      const transformedRow = {};
 
-      isProcessing = true;
-      readStream.pause();
-
-      for (const data of processingQueue) {
-        await onData(data);
-      }
-
-      processingQueue = [];
-      isProcessing = false;
-      readStream.resume();
-    };
-
-    const readStream = fs
-      .createReadStream(filePath)
-      .pipe(csv({ separator: ";", headers: false }))
-      .on("data", async (row) => {
-        const transformedRow = {};
-
-        Object.keys(row).forEach((key) => {
-          const newKey = headers[Number(key)];
-          if (newKey) {
-            transformedRow[newKey] = row[key];
-          }
-        });
-
-        processingQueue.push(transformedRow);
-
-        if (processingQueue.length >= batchSize && !isProcessing) {
-          await processQueue(readStream);
+      Object.keys(row).forEach((key) => {
+        const newKey = headers[Number(key)];
+        if (newKey) {
+          transformedRow[newKey] = row[key];
         }
-      })
-      .on("end", async () => {
-        await processQueue(readStream);
-        onEnd();
-        resolve();
-      })
-      .on("error", (error) => {
-        onError(error);
-        reject(error);
       });
+
+      queue.push(transformedRow);
+
+      if (queue.length === batchSize) {
+        stream.pause();
+        await batchFunction(queue);
+        stream.resume();
+        queue = [];
+      }
+    });
+
+    stream.on("end", async () => {
+      if (queue.length > 0) {
+        await onEnd(queue);
+        resolve();
+      }
+      resolve();
+    });
+
+    stream.on("error", (error) => {
+      reject(error);
+    });
   });
 };
 
