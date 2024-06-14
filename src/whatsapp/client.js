@@ -5,13 +5,15 @@ import fs from "fs";
 import mime from "mime-types";
 
 const client = new Client({
+  webVersion: "2.2412.54v2",
   webVersionCache: {
     type: "remote",
     // remotePath: "https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.2412.54.html",
-    remotePath: "https://raw.githubusercontent.com/guigo613/alternative-wa-version/main/html/2.2413.51-beta-alt.html",
+    remotePath: "https://raw.githubusercontent.com/guigo613/alternative-wa-version/main/html/2.2412.54v2.html",
   },
   puppeteer: {
     headless: true,
+    executablePath: 'C:/Program Files/Google/Chrome/Application/chrome.exe'
   },
   authStrategy: new LocalAuth(),
 });
@@ -48,7 +50,7 @@ const main = async () => {
 
   await printGroupParticipants("120363165773523865@g.us");
 
-  await client.sendMessage("5519983136930@c.us", "Hello World 1");
+  await client.sendMessage("5519983136930@c.us", "Hello World maths");
   await sendMediaMessage("5519983136930", "./test.png");
   await sendMediaMessage("5519983136930", "./zapmein-high.avi");
   await client.sendMessage("5519983136930@c.us", "Hello World 2");
