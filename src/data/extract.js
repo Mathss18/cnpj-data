@@ -2,7 +2,7 @@ import { createReadStream } from "fs";
 import { readdirSync } from "fs";
 import { resolve } from "path";
 import unzipper from "unzipper";
-import { Logger } from "../utils/logger.js";
+import { Logger } from "../../utils/logger.js";
 import { INPUT_FOLDER, OUTPUT_FOLDER } from "./index.js";
 
 const getAllZipFoldersNames = () => {

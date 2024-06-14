@@ -1,12 +1,9 @@
 import path, { dirname, resolve } from "path";
 import { fileURLToPath } from "url";
-import {
-  HEADERS_EMPRESAS,
-  HEADERS_ESTABELECIMENTOS,
-} from "../utils/headers.js";
-import { connect } from "./db/connection.js";
-import { EmpresaModel } from "./db/models/empresa.model.js";
-import { Logger } from "../utils/logger.js";
+import { HEADERS_EMPRESAS, HEADERS_ESTABELECIMENTOS } from "../../utils/headers.js";
+import { connect } from "../db/connection.js";
+import { EmpresaModel } from "../db/models/empresa.model.js";
+import { Logger } from "../../utils/logger.js";
 import { setTimeout as sleep } from "timers/promises";
 import {
   getAllFileNames,
@@ -14,17 +11,12 @@ import {
   makeEmpresaEntry,
   makeEstabelecimentoEntry,
   readCsvFile,
-} from "../utils/functions.js";
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-export const BASE_FOLDER = resolve(__dirname, "../");
-export const INPUT_FOLDER = resolve(__dirname, "../input");
-export const OUTPUT_FOLDER = resolve(__dirname, "../output");
+} from "../../utils/functions.js";
+import { BASE_FOLDER, EMPRESAS_BATCH_SIZE, ESTABELECIMENTOS_BATCH_SIZE } from "./index.js";
 
 const handleEmpresas = async () => {
   const folderPath = path.join(BASE_FOLDER, "output", "Empresas");
   const fileNames = getAllFileNames(folderPath);
-  const batchSize = 10000;
   let fileCount = 0;
 
   for (const fileName of fileNames) {
@@ -38,17 +30,9 @@ const handleEmpresas = async () => {
         temp.push(newEntry);
       }
       await EmpresaModel.insertMany(temp);
-      Logger.green(
-        `[File ${fileCount}] Inserted batch of data ${++batchCount}`
-      );
+      Logger.green(`[File ${fileCount}] Inserted batch of data ${++batchCount}`);
     };
-    await readCsvFile(
-      filePath,
-      HEADERS_EMPRESAS,
-      batchSize,
-      insertFunction,
-      insertFunction
-    );
+    await readCsvFile(filePath, HEADERS_EMPRESAS, EMPRESAS_BATCH_SIZE, insertFunction, insertFunction);
     fileCount++;
   }
 };
@@ -56,7 +40,6 @@ const handleEmpresas = async () => {
 const handleEstabelecimentos = async () => {
   const folderPath = path.join(BASE_FOLDER, "output", "Estabelecimentos");
   const fileNames = getAllFileNames(folderPath);
-  const batchSize = 2000;
   let fileCount = 0;
   let index = 0;
 
@@ -77,25 +60,15 @@ const handleEstabelecimentos = async () => {
       }
       if (index % 3 === 0) {
         EmpresaModel.bulkWrite(temp).then(() => {
-          Logger.green(
-            `[File ${fileCount}] Inserted batch of data ${++batchCount}`
-          );
+          Logger.green(`[File ${fileCount}] Inserted batch of data ${++batchCount}`);
         });
       } else {
         await EmpresaModel.bulkWrite(temp);
-        Logger.green(
-          `[File ${fileCount}] Inserted batch of data ${++batchCount}`
-        );
+        Logger.green(`[File ${fileCount}] Inserted batch of data ${++batchCount}`);
       }
       index++;
     };
-    await readCsvFile(
-      filePath,
-      HEADERS_ESTABELECIMENTOS,
-      batchSize,
-      insertFunction,
-      insertFunction
-    );
+    await readCsvFile(filePath, HEADERS_ESTABELECIMENTOS, ESTABELECIMENTOS_BATCH_SIZE, insertFunction, insertFunction);
     fileCount++;
   }
 };
@@ -104,7 +77,7 @@ const main = async () => {
   console.time("Execution time");
   logMemory(1000 * 30);
   await connect();
-  await EmpresaModel.deleteMany({});
+  // await EmpresaModel.deleteMany({});
   await handleEmpresas();
   await sleep(1000 * 10);
   await handleEstabelecimentos();
